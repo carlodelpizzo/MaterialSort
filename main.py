@@ -1,7 +1,8 @@
 import os.path
 import shutil
 import tkinter as tk
-from tkinter import NORMAL, DISABLED, END, Menu, Toplevel, Listbox, filedialog
+from tkinter import (NORMAL, DISABLED, END, Checkbutton, IntVar,
+                     Menu, Toplevel, Listbox, filedialog)
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
 
@@ -24,9 +25,6 @@ class MaterialSort:
         self.root.geometry(f'{(app_width := 325)}x{(app_height := 287)}')
         self.root.resizable(False, False)
         self.root.title('Material Sort')
-
-        self.start_button = tk.Button(self.root, text='Start', width=10, command=self.material_sort)
-        self.start_button.place(x=325 / 2, y=260, anchor='s')
 
         self.source_entry = tk.Entry(self.root, width=50, takefocus=0)
         self.source_entry.place(x=app_width / 2, y=17, anchor='n')
@@ -51,6 +49,14 @@ class MaterialSort:
         self.browse_button_d = tk.Button(self.root, text='Destination Folder', width=14,
                                          command=lambda: self.browse('d'))
         self.browse_button_d.place(x=app_width / 2, y=132, anchor='n')
+
+        self.overwrite_files = IntVar(value=0)
+        self.overwrite_files_check = Checkbutton(self.root, text='overwrite existing files',
+                                                 variable=self.overwrite_files, takefocus=0)
+        self.overwrite_files_check.place(x=15, y=195, anchor='nw')
+
+        self.start_button = tk.Button(self.root, text='Start', width=10, command=self.material_sort)
+        self.start_button.place(x=325 / 2, y=260, anchor='s')
 
         self.menu = Menu(self.root)
         self.file = Menu(self.menu, tearoff=0)
@@ -132,14 +138,14 @@ class MaterialSort:
         if not self.source and not self.destination:
             return
         files = []
-        sorted_files = {}
-        for material in self.materials:
-            sorted_files[material] = []
+        sorted_files = {material: [] for material in self.materials}
         for directory in list_all_sub_directories(self.source):
             for item in os.listdir(directory):
                 if os.path.isfile(path := f'{directory}/{item}'):
                     files.append((path, item))
         for file in files:
+            if 'PVLIB' in file[1]:
+                continue
             for material in self.materials:
                 if material in file[1]:
                     sorted_files[material].append(file)
@@ -150,6 +156,8 @@ class MaterialSort:
             if not os.path.isdir(path := f'{self.destination}/{material}'):
                 os.mkdir(path)
             for file in sorted_files[material]:
+                if not self.overwrite_files.get() and os.path.isfile(f'{path}/{file[1]}'):
+                    continue
                 shutil.copyfile(file[0], f'{path}/{file[1]}')
 
 
